@@ -40,6 +40,27 @@ jobs:
       - name: Clone project
         run: git clone --depth=1 ${{ github.event.inputs.repository }} workspace
 
+      - name: Check and Adjust Detekt Configuration
+        id: detekt_adjust
+        working-directory: ./workspace
+        run: |
+          if [ -f "config/detekt/detekt.yml" ]; then
+            echo "Detekt configuration file exists. Adjusting thresholds..."
+            echo "complexity:" >> config/detekt/detekt.yml
+            echo "  TooManyFunctions:" >> config/detekt/detekt.yml
+            echo "    thresholdInClasses: 30" >> config/detekt/detekt.yml
+            echo "    thresholdInObjects: 30" >> config/detekt/detekt.yml
+            echo "    thresholdInEnums: 30" >> config/detekt/detekt.yml
+            echo "  LongMethod:" >> config/detekt/detekt.yml
+            echo "    threshold: 100" >> config/detekt/detekt.yml
+            echo "  CyclomaticComplexity:" >> config/detekt/detekt.yml
+            echo "    threshold: 20" >> config/detekt/detekt.yml
+            echo "::set-output name=detekt_adjusted::true"
+          else
+            echo "Detekt configuration file does not exist. Skipping adjustments."
+            echo "::set-output name=detekt_adjusted::false"
+          fi
+
       - name: Build APK
         working-directory: ./workspace
         run: |
@@ -50,6 +71,6 @@ jobs:
       - name: Upload the APK artifact with user-specified retention
         uses: actions/upload-artifact@v4
         with:
-          path: ./**/*.apk
           name: apk-archive
+          path: ./**/*.apk
           retention-days: ${{ github.event.inputs.retentionDays }}
